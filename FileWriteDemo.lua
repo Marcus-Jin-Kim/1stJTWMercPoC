@@ -3,3 +3,127 @@
 --- Created by jamaica.
 --- DateTime: 2021-03-30 오후 9:10
 ---
+---
+BalanceData = {}
+
+local GameEventHandler = {}
+world.addEventHandler(GameEventHandler)
+
+function GameEventHandler:onEvent(event)
+
+	--S_EVENT_PLAYER_ENTER_UNIT
+	--This is to write last aircraft the player entered, and write it down
+	if event.id == world.event.S_EVENT_PLAYER_ENTER_UNIT then
+
+		-- TODO: sometimes initiator is nil, make failsafe
+		local playerName = event.initiator:getPlayerName()
+		if playerName ~= nil then
+			local aircraftName = event.initiator:getTypeName()
+			local msgText = "1stJTWMerc: " .. playerName .. " entered unit: " .. aircraftName
+			trigger.action.outText(msgText, 30)
+			env.info(msgText)
+
+			BalanceData[playerName] = {}
+			BalanceData[playerName]["balance"] = 0
+			-- TODO: special characters wont work in filenames.. escape? ignore? hash?
+			local myFileName = "1stJTWMerc_" .. playerName .. ".lua"
+			local myFileFullPath = GetSavePath() .. "\\" .. myFileName
+
+			if file_exists(myFileFullPath) then
+				local msgText = "1stJTWMerc: " .. playerName .. " found balance file: " .. myFileFullPath
+				trigger.action.outText(msgText, 30)
+				env.info(msgText)
+
+				dofile(myFileFullPath)	-- should load and overwite BalanceData[playerName]
+			end
+
+			local msgText = "1stJTWMerc: " .. playerName .. " current balance: " .. BalanceData[playerName]["balance"]
+			trigger.action.outText(msgText, 30)
+			env.info(msgText)
+
+			local msgText = "1stJTWMerc: " .. playerName .. " adding 1 won to balance. it's a Bonus!"
+			trigger.action.outText(msgText, 30)
+			env.info(msgText)
+
+			BalanceData[playerName]["balance"] = BalanceData[playerName]["balance"] + 1
+
+			WriteBalance(playerName, myFileFullPath)
+
+		end
+
+	end
+end
+
+function file_exists(name)
+   local f=io.open(name,"r")
+   if f~=nil then io.close(f) return true else return false end
+end
+
+
+function WriteBalance(playerName, fileFullPath)
+
+	-- local path = GetSavePath()
+	local saveStr = "BalanceData[\"" .. playerName .. "\"] = " .. TableSerialization(BalanceData[playerName], 0)
+	local saveFile = io.open(fileFullPath, "w")
+
+	if saveFile == nil then -- or rgContractsFile == nil then
+		local msgText = "Cannot write gamesave. NOTHING WILL BE SAVED\n" ..
+				"Check commenting out of io and os entry in Scripts/MissionScript.lua. Read install manual for further information." ..
+				"Try re-installing DCS Rogue,and check YOUR_DCS_SAVE_FOLDER\\Mods\\tech\\DCS-Rogue\\_saves exists."
+		trigger.action.outText(msgText, 30)
+		env.info(msgText)
+	else
+		saveFile:write(saveStr)
+		saveFile:close()
+	end
+end
+
+
+
+function GetSavePath()   -- TODO: any way NOT to hardcode? dont want lfs.writedir, but i already use io, so why not
+	local path
+	path = os.getenv('USERPROFILE')
+			.. "\\Saved Games"
+	return path
+end
+
+
+-- copied and slightly modified from MBot's DCE. Thanks!
+-- https://forums.eagle.ru/showthread.php?t=153020
+function TableSerialization(t, i)											--function to turn a table into a string
+	local text = "{\n"
+	local tab = ""
+	for n = 1, i + 1 do															--controls the indent for the current text line
+		tab = tab .. "\t"
+	end
+	for k,v in pairs(t) do
+		if type(k) == "string" then
+			text = text .. tab .. "[\"" .. k .. "\"] = "
+		else
+			text = text .. tab .. "[" .. k .. "] = "
+		end
+		if type(v) == "string" then
+			text = text .. "\"" .. v .. "\",\n"
+		elseif type(v) == "number" then
+			text = text .. v .. ",\n"
+		elseif type(v) == "table" then
+			text = text .. TableSerialization(v, i + 1)
+		elseif type(v) == "boolean" then
+			if v == true then
+				text = text .. "true,\n"
+			else
+				text = text .. "false,\n"
+			end
+		end
+	end
+	tab = ""
+	for n = 1, i do																--indent for closing bracket is one less then previous text line
+		tab = tab .. "\t"
+	end
+	if i == 0 then
+		text = text .. tab .. "}\n"												--the last bracket should not be followed by an comma
+	else
+		text = text .. tab .. "},\n"											--all brackets with indent higher than 0 are followed by a comma
+	end
+	return text
+end
