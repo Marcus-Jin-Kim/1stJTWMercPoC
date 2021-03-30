@@ -14,7 +14,7 @@ JSON 으로 기록할거고 (Lua Table -> JSON)
 os, io, lfs 모듈 sanitize 를 주석처리해야한다.
 아래처럼..
 
---Initialization script for the Mission lua Environment (SSE)
+```--Initialization script for the Mission lua Environment (SSE)
 
 dofile('Scripts/ScriptingSystem.lua')
 
@@ -35,3 +35,21 @@ do
 	require = nil
 	loadlib = nil
 end
+```
+
+작동방식
+
+1. 미션시작
+2. 플레이어가 비행기에 탑승하면 이벤트 작동 playerName 감지
+3. Balance[playerName] = 0으로 초기화
+3. C:\Users\Username\Saved Games\ 폴더를 검색
+4. playerName.lua 파일이 있는지 확인
+5. 있으면 로드해서 Balance[playerName] 변수를 덮어쓴다
+6. 따라서 이전에 파일에 기록된 값이 메모리에 올라옴
+7. 출력
+8. 보너스로 1원을 더해준다
+9. 해당 파일에 저장
+
+다음번에 로그인하면 이벤트가 작동하여, 이전에 기록된 Balance 를 꺼내오고
+그에 이어서 .. 할수 있음
+
